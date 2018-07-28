@@ -205,9 +205,16 @@ static bool loadMoFileStringsToArray(FILE* moFile,
 		const char* stringsCharsArrayIter = stringCharsArray;
 		for (uint32_t i = 0; i < numberOfStrings; i++)
 		{
+#ifdef __ANDROID__
+			// Bugfix from j-jorge's branch of libintl-lite: https://github.com/j-jorge/libintl-lite/commit/240f38c005ba9afce9c3c3629d624d904cb09403
+			const char* currentStrEndIter = stringsCharsArrayIter + stringsLengthsArray[i];
+			outStringsFromMoFileArray[i] = std::string(stringsCharsArrayIter, currentStrEndIter);
+			stringsCharsArrayIter = currentStrEndIter + 1 /* skip the NULL char at the end of the string */ ;
+#else
 			const char* currentStrEndIter = stringsCharsArrayIter + stringsLengthsArray[i] + 1;
 			outStringsFromMoFileArray[i] = std::string(stringsCharsArrayIter, currentStrEndIter);
 			stringsCharsArrayIter = currentStrEndIter;
+#endif
 		}
 	}
 

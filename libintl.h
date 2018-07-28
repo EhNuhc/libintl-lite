@@ -110,6 +110,12 @@ LIBINTL_LITE_API const char* ngettext(const char* origStr, const char* origStrPl
  */
 LIBINTL_LITE_API const char* dngettext(const char* domain, const char* origStr, const char* origStrPlural, unsigned long n);
 
+#ifdef __ANDROID__
+// Two extra signatures required as per: http://blog.stuff-o-matic.com/post/2013/09/07/Porting-a-C-game-to-Android,-the-case-of-Andy-s-Super-Great-Park
+LIBINTL_LITE_API libintl_lite_bool_t bindtextdomain(const char* domain, const char* moFilePath);
+LIBINTL_LITE_API libintl_lite_bool_t bind_textdomain_codeset(const char* domain, const char* moFilePath);
+#endif
+
 #ifdef __cplusplus
 } // extern "C"
 #endif

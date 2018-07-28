@@ -39,6 +39,10 @@ typedef unsigned int uint32_t;
 #include <stdint.h>
 #endif
 
+#ifdef __ANDROID__
+#include <iostream>
+#endif
+
 #include "MessageCatalog.hpp"
 #include "Util.hpp"
 
@@ -248,18 +252,69 @@ const char* dgettext(const char* domain, const char* origStr)
 
 const char* ngettext(const char* origStr, const char* origStrPlural, unsigned long n)
 {
-	if (n == 1)
-	{
-		return gettext(origStr);
-	}
-	else
-	{
-		return gettext(origStrPlural);
-	}
+#ifdef __ANDROID__
+    try {
+        // First let's get the translated megastring that contains all the plural translations separated by NUL chars
+        const char* translatedStr = gettext(origStr);
+
+        // Now determine correct plural form to use. This data is described in .PO files "Plural-Forms" metadata.
+        const char* language = getenv("LANGUAGE");
+
+        // Bail out if we don't have data, or the result of gettext is the exact same pointer to the source string (so we don't have a translated megastring to look at)
+        if (!translatedStr || !language || translatedStr == origStr) {
+            if (n == 1)
+                return origStr;
+            else
+                return origStrPlural;
+        }
+
+        int nplurals=2;
+        int plural=n!=1;
+        if (strcmp(language, "en") == 0)            { nplurals=2; plural=(n != 1); }
+        else if (strcmp(language, "fr") == 0)       { nplurals=2; plural=(n > 1); }
+        else if (strcmp(language, "de") == 0)       { nplurals=2; plural=(n != 1); }
+        else if (strcmp(language, "it_IT") == 0)    { nplurals=2; plural=(n != 1); }
+        else if (strcmp(language, "es_AR") == 0)    { nplurals=2; plural=(n != 1); }
+        else if (strcmp(language, "es_ES") == 0)    { nplurals=2; plural=(n != 1); }
+        else if (strcmp(language, "ja") == 0)       { nplurals=1; plural=0; }
+        else if (strcmp(language, "ko") == 0)       { nplurals=1; plural=0; }
+        else if (strcmp(language, "pt_BR") == 0)    { nplurals=2; plural=(n > 1); }
+        else if (strcmp(language, "pt_PT") == 0)    { nplurals=2; plural=n != 1; }
+        else if (strcmp(language, "ru") == 0)       { nplurals=4; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<12 || n%100>14) ? 1 : n%10==0 || (n%10>=5 && n%10<=9) || (n%100>=11 && n%100<=14)? 2 : 3); }
+        else if (strcmp(language, "zh_CN") == 0)    { nplurals=1; plural=0; }
+        else if (strcmp(language, "zh_TW") == 0)    { nplurals=1; plural=0; }
+
+        // Now we know which plural form to use, move the string pointer past the appropriate # of NUL characters.
+        // This is a bit scary because it relies on the .MO file always storing the correct number of plurals,
+        // otherwise we could overrun the string buffer. Seems to work fine though... (nervous laughter)
+        for (int i = 0; i < plural; ++i)
+            translatedStr += strlen(translatedStr) + 1; // advance to the start of the next string
+        return translatedStr;
+    } catch (const std::exception &err) {
+        std::cerr << "Error in libintl-lite ngettext(): " << err.what() << std::endl;
+        if (n == 1)
+            return origStr;
+        else
+            return origStrPlural;
+    }
+#else
+    if (n == 1)
+    {
+        return gettext(origStr);
+    }
+    else
+    {
+        return gettext(origStrPlural);
+    }
+#endif
 }
 
 const char* dngettext(const char* domain, const char* origStr, const char* origStrPlural, unsigned long n)
 {
+#ifdef __ANDROID__
+    // not implemented yet
+    return NULL;
+#else
 	if (n == 1)
 	{
 		return dgettext(domain, origStr);
@@ -268,4 +323,17 @@ const char* dngettext(const char* domain, const char* origStr, const char* origS
 	{
 		return dgettext(domain, origStrPlural);
 	}
+#endif
 }
+
+#ifdef __ANDROID__
+libintl_lite_bool_t bindtextdomain(const char* domain, const char* moFilePath)
+{
+	return loadMessageCatalog( domain, moFilePath );
+}
+
+libintl_lite_bool_t bind_textdomain_codeset(const char* domain, const char* oFilePath)
+{
+	return LIBINTL_LITE_BOOL_FALSE;
+}
+#endif

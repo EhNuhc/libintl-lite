@@ -74,7 +74,18 @@ public:
 		const std::string* origStrPtr = std::lower_bound(this->sortedOrigStringsArray,
 				lastSortedOrigStringEndIter,
 				orig);
+#ifdef __ANDROID__
+		// Bugfix from j-jorge's branch of libintl-lite: https://github.com/j-jorge/libintl-lite/commit/40e5a41e9b19e3252d348e0548f85e66fa44a79e
+		// However, libintl-lite does not seem to support plural form strings + translations properly, so I've had to modify the fix further.
+		// Plural strings are stored as "<singular>NUL<plural>NUL<plural>..." for as many plurals are in the language, eg. Russian has 4, French has 2, Japanese has 1.
+		// So we only compare the first singular string as per gettext MO files spec here: https://www.gnu.org/software/gettext/manual/html_node/MO-Files.html
+		// We do this via c_str() which clamps at the first NUL character.
+		// Later on once we have a match, we will dig out the proper plural translation from this megastring.
+		if (!origStrPtr || (origStrPtr == lastSortedOrigStringEndIter) || 
+		    (std::string((*origStrPtr).c_str()) != std::string(orig.c_str())) )
+#else
 		if (!origStrPtr || (origStrPtr == lastSortedOrigStringEndIter))
+#endif
 		{
 			return NULL;
 		}
